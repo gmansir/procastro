@@ -117,7 +117,7 @@ def Atmospheric_dispersion_correction(cube_path,
     if (len(data) > 0) and (len(wave) == 0):
         print(" ")
         print("wave = empty")
-        print("Error: If you provide the data, also should provide the wavelength")
+        print("Error: If you provide the data, you should also provide the wavelength")
 
     if len(data) > 0:
         N = len(data)
@@ -155,8 +155,6 @@ def Atmospheric_dispersion_correction(cube_path,
     if center_y == False:
         y_coords_center = np.ones(N)*np.nanmedian(y_coords_center)
 
-    if plots == True:
-        fig, axes = plt.subplots(2, 1, figsize=(18, 6))
 
     # Define the parabola function
     def parabola(x, a, b, c):
@@ -170,20 +168,7 @@ def Atmospheric_dispersion_correction(cube_path,
         lower = closest(range_y[0], wave)
         upper = closest(range_y[1], wave)
         popt_y, pcov_y = curve_fit(parabola, wave[lower:upper], y_coords_center[lower:upper] - y_coords_center[0])
-
-    # Plot the data and the parabola
-
-    if plots == True:
-        axes[0].set_title("Movement of the center in y of the object through wavelength")
-        axes[0].plot(wave, y_coords_center,  linewidth=0.3, c="k", alpha=1, label='center in y-spaxels')
-        axes[0].plot(wave, y_coords_center[0] + parabola(wave, *popt_y), c="red", label='parabola')
-        axes[0].plot(wave, y_coords_center[0] + np.round(parabola(wave, *popt_y)), linestyle=":", c="purple", label='round parabola', zorder=10)
-        axes[0].set_ylim(-1, pix_y + 1)
-        axes[0].set_xlabel("Wavelength [nm]", fontsize=14)
-        axes[0].set_ylabel("y-spaxels", fontsize=14)
-        axes[0].grid(False)
-        axes[0].legend()
-
+        
     if range_x == None:
         # Fit a parabola to the data using curve_fit()
         popt_x, pcov_x = curve_fit(parabola, wave[:], x_coords_center[:] - x_coords_center[0])
@@ -193,15 +178,34 @@ def Atmospheric_dispersion_correction(cube_path,
         upper = closest(range_x[1], wave)
         popt_x, pcov_x = curve_fit(parabola, wave[lower:upper], x_coords_center[lower:upper] - x_coords_center[0])
 
+                                          
     # Plot the data and the parabola
-
     if plots == True:
-        axes[1].set_title("Movement of the center in x of the object through wavelength")
-        axes[1].plot(wave, x_coords_center,  linewidth=0.3, c="k", alpha=1, label='center in y-spaxels')
-        axes[1].plot(wave, x_coords_center[0] + parabola(wave, *popt_x), c="red", label='parabola')
-        axes[1].plot(wave, x_coords_center[0] + np.round(parabola(wave, *popt_x)), linestyle=":", c="purple", label='round parabola', zorder=10)
-        axes[1].set_ylim(-1, pix_x + 1)
-        axes[1].set_xlabel("Wavelength [nm]", fontsize=14)
+        w, h = plt.figaspect(0.8)
+        fig, axes = plt.subplots(2, 1, figsize=(w, h), sharex=True)  # Share x-axis for both plots
+
+        # Reduce vertical spacing between plots
+        plt.subplots_adjust(hspace=0)
+
+        # Plot for y-direction
+        axes[0].plot(wave / 1000, y_coords_center, linewidth=0.3, c="k", alpha=1, label='center in y-spaxels')
+        axes[0].plot(wave / 1000, y_coords_center[0] + parabola(wave, *popt_y), c="cornflowerblue", label='parabola')
+        axes[0].plot(wave / 1000, y_coords_center[0] + np.round(parabola(wave, *popt_y)), linestyle=":",
+                     c="rebeccapurple", label='round parabola', zorder=10)
+        #axes[0].set_ylim(-1, pix_y + 1)
+        axes[0].set_ylim(5, 15)
+        axes[0].set_ylabel("y-spaxels", fontsize=14)
+        axes[0].grid(False)
+        axes[0].legend()
+
+        # Plot for x-direction
+        axes[1].plot(wave / 1000, x_coords_center, linewidth=0.3, c="k", alpha=1, label='center in x-spaxels')
+        axes[1].plot(wave / 1000, x_coords_center[0] + parabola(wave, *popt_x), c="cornflowerblue", label='parabola')
+        axes[1].plot(wave / 1000, x_coords_center[0] + np.round(parabola(wave, *popt_x)), linestyle=":",
+                     c="rebeccapurple", label='round parabola', zorder=10)
+        #axes[1].set_ylim(-1, pix_x + 1)
+        axes[1].set_ylim(0.75, 2)
+        axes[1].set_xlabel("Wavelength (µm)", fontsize=14)
         axes[1].set_ylabel("x-spaxels", fontsize=14)
         axes[1].grid(False)
         axes[1].legend()
@@ -343,19 +347,20 @@ def Atmospheric_dispersion_correction(cube_path,
     print("Center of the object: (y, x) = (", y_center,", ", x_center, ")")
     print("previous center (before the correction): (y, x) = (", y_center + y_dif_center, ", ", x_center + x_dif_center, ")")
 
-    if plots == True:
-        fig, axes = plt.subplots(1, 1, figsize=(18, 10))
+ if plots == True:
+        fig = plt.figure(7)
+        ax1 = fig.add_subplot(211)
+        ax2 = fig.add_subplot(212)
         median_data = np.nanmedian(data[:, y_center, x_center])
         median_corrected_data = np.nanmedian(corrected_data[:, y_center, x_center])
         mean_both = median_data*0.5 + median_corrected_data*0.5
-        axes.plot(wave, data[:, y_center + y_dif_center, x_center + x_dif_center] , c="red", label="Original data", linewidth=0.5)
-        axes.plot(wave, corrected_data[:, y_center, x_center] , c="k", label="Corrected data", linewidth=0.5)
-        axes.set_title("Spectra after the atmospheric dispersion correction", fontsize=21)
-        axes.set_xlabel("Wavelenght", fontsize=18)
-        axes.set_ylabel("Count", fontsize=18)
-        axes.set_ylim(0, mean_both*max_plots)
-        axes.legend()
-        axes.grid(False)
+        ax1.plot(wave, data[:, y_center + y_dif_center, x_center + x_dif_center] , c="k", label="Original data", linewidth=0.5)
+        ax1.plot(wave, corrected_data[:, y_center, x_center] , c="cornflowerblue", label="Corrected data", linewidth=0.5)
+        residuals = data[:, y_center + y_dif_center, x_center + x_dif_center] - corrected_data[:, y_center, x_center]
+        ax2.plot(wave, residuals, c='cornflowerblue', linewidth=0.5)
+        fig.suptitle("Atmospheric Dispersion Correction") #, fontsize=21)
+        ax2.set_xlabel("Wavelength (µm)") #, fontsize=18)
+        #axes.set_ylim(0, mean_both*max_plots)
         if save_plots != None:
             plt.savefig(save_plots + "/AtmosphericDispersion_Correction.png")
         plt.show()
@@ -571,7 +576,7 @@ def optimal_radius_selection_IFU(cube_path,
         axes.plot(signal_r[1:], StoN_radius[1:], c="k", label = "Real S/N")
         axes.set_ylabel("S/N", fontsize=18)
         axes.set_xlabel("log(Signal)", fontsize=18)
-        axes.plot(signal_r[1:], f(signal_r[1:], alpha, cte), c="red", label="Teoritical S/N")
+        axes.plot(signal_r[1:], f(signal_r[1:], alpha, cte), c="cornflowerblue", label="Theoretical S/N")
         axes.fill_between(signal_r[1:], (1-error/100)*f(signal_r[1:], alpha, cte), (1 + error/100)*f(signal_r[1:], alpha, cte), color="red", alpha=0.1)
         axes.plot(signal_r[indiceRadio], StoN_radius[indiceRadio],  ".", c="blue", markersize=10, label="Optimal Radius: "+ str(np.round(radius_spaxel[indiceRadio]))+ ' spaxels')
         axes.legend()
@@ -1118,19 +1123,21 @@ def process_my_ifu_obs(fits_path,
                                                 A=A_sc, 
                                                 window=window_sc)
 
-    fig, axes = plt.subplots(1, 1, figsize=(18, 10))
+       fig = plt.figure(8)
+    ax1 = fig.add_subplot(211)
+    ax2 = fig.add_subplot(212)
     median = np.median(corrected_data[:, center[0], center[1]])
-    axes.vlines(lower_limit, 0, median*3, linestyle="--", color="orange", label="Limits for finding the best radius.")
-    axes.vlines(upper_limit, 0, median*3, linestyle="--", color="orange")
-    axes.plot(wave, corrected_data[:, center[0], center[1]], c="red", linewidth=0.5, label="Raw data")
-    axes.plot(wave, clean_data[:, center[0], center[1]], c="k", linewidth=0.5, label="Data with Sigma-Clipping")
-    axes.set_title("Data with and without Sigma clipping", fontsize=22)
-    axes.set_xlabel("Wavelength", fontsize=18)
-    axes.set_ylabel("Count", fontsize=18)
-    axes.legend()
-    axes.set_ylim(0, median*3)
-    if save_plots != None:
-        plt.savefig(save_plots + "/SigmaClipping.png")
+    #axes.vlines(lower_limit/1000, 0, median*10, linestyle="--", color="orange", label="Limits")
+    #axes.vlines(upper_limit/1000, 0, median*10, linestyle="--", color="orange")
+    ax1.plot(wave/1000, corrected_data[:, center[0], center[1]], c="black", linewidth=0.5, label="Before Clipping")
+    ax1.plot(wave/1000, clean_data[:, center[0], center[1]], c="cornflowerblue", linewidth=0.5, label="After Clipping")
+    residuals = corrected_data[:, center[0], center[1]] - clean_data[:, center[0], center[1]]
+    ax2.plot(wave/1000, residuals, c="cornflowerblue", linewidth=0.5, label="Sigma Clipping Risiduals")
+    fig.suptitle("Sigma Clipping") #, fontsize=22)
+    ax2.set_xlabel("Wavelength (µm)") #, fontsize=18)
+    #axes.set_ylim(0, median*3)
+    plt.savefig(save_plots + "/SigmaClipping.png")
+    plt.show()
 
     radius, radius_spaxels = optimal_radius_selection_IFU(" ", 
                                                           center, 
@@ -1153,12 +1160,16 @@ def process_my_ifu_obs(fits_path,
                                 dim_x=dx*(pix_x + 1), 
                                 dim_y=dy*(pix_y + 1))
     
-    fig, axes = plt.subplots(1, 1, figsize=(18, 10))
+       w, h = plt.figaspect(0.5)
+    fig, axes = plt.subplots(1, 1, figsize=(w, h))
     median = np.median(final_data)
-    axes.plot(wave, final_data, c="k", linewidth=0.5)
-    axes.set_title("Final data after the Integration", fontsize=22)
-    axes.set_xlabel("Wavelength", fontsize=18)
-    axes.set_ylabel("Count", fontsize=18)
+    collapsed_data = np.median(data, axis=(1,2))
+    scale_factor = np.max(final_data) / np.max(collapsed_data)
+    axes.plot(wave/1000, collapsed_data*scale_factor, c='k', linewidth=0.5)
+    axes.plot(wave/1000, final_data, c="cornflowerblue", linewidth=0.5)
+    axes.set_title("Disk Integration Results") #, fontsize=22)
+    axes.set_xlabel("Wavelength (µm)") #, fontsize=18)
+    axes.set_ylabel("Counts") #, fontsize=18)
     axes.legend()
     axes.set_ylim(0, median*3)
     if save_plots != None:
